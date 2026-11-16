@@ -43,6 +43,7 @@ const SITE = {
 /* ---------- 固定文案（中英双语），一般不用改 ---------- */
 const I18N = {
   zh: {
+    "term.online": "ONLINE",
     "nav.about": "关于",
     "nav.skills": "技能",
     "nav.projects": "项目",
@@ -68,6 +69,7 @@ const I18N = {
     "label.blog": "Blog",
   },
   en: {
+    "term.online": "ONLINE",
     "nav.about": "About",
     "nav.skills": "Skills",
     "nav.projects": "Projects",
@@ -98,6 +100,7 @@ const I18N = {
 
 const $ = (id) => document.getElementById(id);
 const API = "https://api.github.com/users/" + SITE.username;
+const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let lang = localStorage.getItem("site-lang") || "zh";
 
@@ -105,27 +108,114 @@ function t(key) {
   return I18N[lang][key] || key;
 }
 
-/* 应用语言：静态文案 + 重新渲染动态区域 */
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ---------- 终端打字机 ---------- */
+function renderHeroLinks() {
+  const box = $("hero-links");
+  if (!box) return;
+  box.textContent = "";
+  const links = [
+    { text: "GitHub", href: "https://github.com/" + SITE.username },
+    SITE.email ? { text: "Email", href: "mailto:" + SITE.email } : null,
+    SITE.blog ? { text: "Blog", href: SITE.blog } : null,
+  ].filter(Boolean);
+  links.forEach((l) => {
+    const a = el("a", null, l.text);
+    a.href = l.href;
+    if (!l.href.startsWith("mailto:")) {
+      a.target = "_blank";
+      a.rel = "noopener";
+    }
+    box.appendChild(a);
+  });
+}
+
+async function buildTerminal() {
+  const body = $("terminal-body");
+  if (!body) return;
+  body.textContent = "";
+
+  const seq = [
+    { cmd: "whoami", out: SITE.displayName, cls: "hero-name" },
+    { cmd: "cat title.txt", out: t("hero.title"), cls: "hero-title" },
+    { cmd: "cat bio.txt", out: t("hero.bio"), cls: "hero-bio" },
+    { cmd: "ls ./links", out: null },
+  ];
+
+  for (const item of seq) {
+    // 命令行
+    const line = el("div", "line");
+    const prompt = el("span", "t-prompt", "$ ");
+    const cmd = el("span", "cmd");
+    line.append(prompt, cmd);
+    body.appendChild(line);
+
+    if (REDUCED_MOTION) {
+      cmd.textContent = item.cmd;
+    } else {
+      for (const ch of item.cmd) {
+        cmd.textContent += ch;
+        await sleep(26 + Math.random() * 30);
+      }
+      await sleep(140);
+    }
+
+    // 输出
+    if (item.out !== null) {
+      const out = el("div", "line out out-appear");
+      const span = el("span", item.cls, item.out);
+      if (item.cls === "hero-title") span.id = "hero-title";
+      if (item.cls === "hero-bio") span.id = "hero-bio";
+      out.appendChild(span);
+      body.appendChild(out);
+      await sleep(REDUCED_MOTION ? 0 : 420);
+    }
+  }
+
+  // 链接行 + 常亮光标
+  const linkLine = el("div", "line out out-appear");
+  const linkBox = el("div", "hero-links");
+  linkBox.id = "hero-links";
+  linkLine.appendChild(linkBox);
+  body.appendChild(linkLine);
+  renderHeroLinks();
+
+  const finalLine = el("div", "line");
+  finalLine.append(el("span", "t-prompt", "$ "), el("span", "cursor"));
+  body.appendChild(finalLine);
+}
+
+/* ---------- 语言 ---------- */
 function applyLang() {
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    el.textContent = t(el.dataset.i18n);
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    node.textContent = t(node.dataset.i18n);
   });
   $("lang-toggle").textContent = lang === "zh" ? "EN" : "中";
-  $("hero-name").textContent = SITE.displayName;
+  const setTxt = (id, txt) => {
+    const node = $(id);
+    if (node) node.textContent = txt;
+  };
+  setTxt("hero-title", t("hero.title"));
+  setTxt("hero-bio", t("hero.bio"));
   renderSkills();
   renderFooter();
-  renderContacts(); // 依赖文案，需要时重建
+  renderContacts();
 }
 
 function renderSkills() {
   const cloud = $("skill-cloud");
   cloud.textContent = "";
   SITE.skills.forEach((s) => {
-    const chip = document.createElement("span");
-    chip.className = "skill-chip";
-    chip.textContent = lang === "zh" ? s.zh : s.en;
-    cloud.appendChild(chip);
+    cloud.appendChild(el("span", "skill-chip", lang === "zh" ? s.zh : s.en));
   });
 }
 
@@ -133,7 +223,7 @@ function renderFooter() {
   $("footer-text").textContent = t("footer").replace("{year}", new Date().getFullYear());
 }
 
-/* 联系方式：GitHub 必显，邮箱/博客按配置显隐 */
+/* ---------- 联系方式 ---------- */
 function renderContacts() {
   const list = $("contact-list");
   list.textContent = "";
@@ -145,31 +235,23 @@ function renderContacts() {
   ].filter(Boolean);
 
   items.forEach((it) => {
-    const row = document.createElement("div");
-    row.className = "contact-item";
-    const icon = document.createElement("span");
-    icon.className = "icon";
-    icon.textContent = it.icon;
-    const label = document.createElement("span");
-    label.className = "label";
-    label.textContent = it.label;
-    const link = document.createElement("a");
+    const row = el("div", "contact-item");
+    row.append(
+      el("span", "icon", it.icon),
+      el("span", "label", it.label)
+    );
+    const link = el("a", null, it.href.replace(/^mailto:/, ""));
     link.href = it.href;
-    link.target = it.href.startsWith("mailto:") ? "" : "_blank";
-    link.rel = "noopener";
-    link.textContent = it.href.replace(/^mailto:/, "");
-    row.append(icon, label, link);
+    if (!it.href.startsWith("mailto:")) {
+      link.target = "_blank";
+      link.rel = "noopener";
+    }
+    row.appendChild(link);
     list.appendChild(row);
   });
-
-  // hero 里的快捷链接同步显隐
-  $("hero-email").hidden = !SITE.email;
-  if (SITE.email) $("hero-email").href = "mailto:" + SITE.email;
-  $("hero-blog").hidden = !SITE.blog;
-  if (SITE.blog) $("hero-blog").href = SITE.blog;
 }
 
-/* 头像：来自 GitHub，加载失败时用字母头像兜底 */
+/* ---------- 头像 ---------- */
 function renderAvatar() {
   const img = $("about-avatar");
   const fallback =
@@ -177,7 +259,7 @@ function renderAvatar() {
     encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
         '<rect width="100" height="100" fill="#161b22"/>' +
-        '<text x="50" y="58" font-size="34" fill="#3fb950" text-anchor="middle" font-family="monospace">' +
+        '<text x="50" y="58" font-size="34" fill="#00ff9d" text-anchor="middle" font-family="monospace">' +
         SITE.displayName.slice(0, 2).toUpperCase() +
         "</text></svg>"
     );
@@ -188,7 +270,7 @@ function renderAvatar() {
   img.src = "https://github.com/" + SITE.username + ".png?size=200";
 }
 
-/* 个人资料事实区（location / since / repos / followers） */
+/* ---------- 个人资料事实区 ---------- */
 async function renderFacts() {
   const set = (id, val) => {
     $(id).textContent = val;
@@ -209,7 +291,7 @@ async function renderFacts() {
   }
 }
 
-/* 项目卡片：从 GitHub API 拉公开仓库（排除本仓库），失败时给出提示 */
+/* ---------- 项目卡片 ---------- */
 async function renderProjects() {
   const grid = $("project-grid");
   try {
@@ -220,51 +302,156 @@ async function renderProjects() {
     grid.textContent = "";
 
     if (!repos.length) {
-      const empty = document.createElement("div");
-      empty.className = "loading";
-      empty.textContent = t("projects.none");
-      grid.appendChild(empty);
+      grid.appendChild(el("div", "loading", t("projects.none")));
       return;
     }
 
     repos.slice(0, 6).forEach((r) => {
-      const card = document.createElement("a");
-      card.className = "project-card";
+      const card = el("a", "project-card");
       card.href = r.html_url;
       card.target = "_blank";
       card.rel = "noopener";
 
-      const name = document.createElement("div");
-      name.className = "repo-name";
-      name.textContent = r.name;
-
-      const desc = document.createElement("div");
-      desc.className = "repo-desc";
-      desc.textContent = r.description || t("projects.nodesc");
-
-      const meta = document.createElement("div");
-      meta.className = "repo-meta";
-      const langEl = document.createElement("span");
-      langEl.className = "lang";
-      langEl.textContent = r.language || "—";
-      const stars = document.createElement("span");
-      stars.className = "stars";
-      stars.textContent = r.stargazers_count;
-
-      meta.append(langEl, stars);
-      card.append(name, desc, meta);
+      const meta = el("div", "repo-meta");
+      meta.append(
+        el("span", "lang", r.language || "—"),
+        el("span", "stars", String(r.stargazers_count))
+      );
+      card.append(
+        el("div", "repo-name", r.name),
+        el("div", "repo-desc", r.description || t("projects.nodesc")),
+        meta
+      );
       grid.appendChild(card);
     });
   } catch {
     grid.textContent = "";
-    const err = document.createElement("div");
-    err.className = "loading";
-    err.textContent = t("projects.error");
-    grid.appendChild(err);
+    grid.appendChild(el("div", "loading", t("projects.error")));
   }
 }
 
-/* 语言切换 */
+/* ---------- 星空粒子背景 ---------- */
+function initStarfield() {
+  const canvas = $("bg-canvas");
+  if (!canvas || REDUCED_MOTION) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const COLORS = ["0,255,157", "0,212,255", "167,139,250"];
+  const mouse = { x: null, y: null };
+  let w = 0, h = 0, raf = 0, pts = [];
+
+  function resize() {
+    w = window.innerWidth;
+    h = window.innerHeight;
+    canvas.width = w * DPR;
+    canvas.height = h * DPR;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const count = Math.min(110, Math.round((w * h) / 16000));
+    pts = Array.from({ length: count }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      r: Math.random() * 1.6 + 0.4,
+      c: COLORS[(Math.random() * COLORS.length) | 0],
+      tw: Math.random() * Math.PI * 2,
+    }));
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, w, h);
+
+    for (const p of pts) {
+      // 鼠标轻微吸引
+      if (mouse.x !== null) {
+        const dx = mouse.x - p.x, dy = mouse.y - p.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 120 * 120 && d2 > 1) {
+          p.vx += dx * 0.00035;
+          p.vy += dy * 0.00035;
+        }
+      }
+      p.x += p.vx;
+      p.y += p.vy;
+      p.tw += 0.02;
+      // 限速
+      const sp = Math.hypot(p.vx, p.vy);
+      if (sp > 0.6) {
+        p.vx *= 0.6 / sp;
+        p.vy *= 0.6 / sp;
+      }
+      // 环绕边界
+      if (p.x < -10) p.x = w + 10; else if (p.x > w + 10) p.x = -10;
+      if (p.y < -10) p.y = h + 10; else if (p.y > h + 10) p.y = -10;
+
+      const a = 0.35 + 0.3 * Math.sin(p.tw);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(" + p.c + "," + a.toFixed(3) + ")";
+      ctx.fill();
+    }
+
+    // 近距粒子连线（星座网络）
+    ctx.lineWidth = 1;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const a = pts[i], b = pts[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 110 * 110) {
+          const alpha = (1 - Math.sqrt(d2) / 110) * 0.12;
+          ctx.strokeStyle = "rgba(0,255,157," + alpha.toFixed(3) + ")";
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function onVisibility() {
+    if (document.hidden) cancelAnimationFrame(raf);
+    else raf = requestAnimationFrame(frame);
+  }
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("mousemove", (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  window.addEventListener("mouseleave", () => {
+    mouse.x = null;
+    mouse.y = null;
+  });
+  document.addEventListener("visibilitychange", onVisibility);
+
+  resize();
+  raf = requestAnimationFrame(frame);
+}
+
+/* ---------- 滚动浮现 ---------- */
+function initReveal() {
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          io.unobserve(entry.target);
+        }
+      }
+    },
+    { threshold: 0.12 }
+  );
+  document.querySelectorAll(".section").forEach((s) => io.observe(s));
+}
+
+/* ---------- 语言切换 ---------- */
 $("lang-toggle").addEventListener("click", () => {
   lang = lang === "zh" ? "en" : "zh";
   localStorage.setItem("site-lang", lang);
@@ -272,8 +459,11 @@ $("lang-toggle").addEventListener("click", () => {
   renderFacts(); // location 文案跟随语言
 });
 
-/* 启动 */
+/* ---------- 启动 ---------- */
 applyLang();
+buildTerminal();
 renderAvatar();
 renderFacts();
 renderProjects();
+initStarfield();
+initReveal();

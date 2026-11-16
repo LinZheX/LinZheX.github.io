@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="LinZheX — personal homepage / 个人主页">
+  <title>LinZheX@github:~$ whoami</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌨</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="prompt">LinZheX@github</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-dollar">$</span>
+      <nav class="nav">
+        <a href="#about" data-i18n="nav.about">关于</a>
+        <a href="#skills" data-i18n="nav.skills">技能</a>
+        <a href="#projects" data-i18n="nav.projects">项目</a>
+        <a href="#contact" data-i18n="nav.contact">联系</a>
+        <button id="lang-toggle" class="lang-toggle" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 终端式 Hero -->
+  <main>
+    <section class="hero">
+      <div class="terminal" id="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span>
+          <span class="dot dot-yellow"></span>
+          <span class="dot dot-green"></span>
+          <span class="terminal-title">LinZheX — bash</span>
+        </div>
+        <div class="terminal-body">
+          <div class="line"><span class="t-prompt">$ </span><span class="cmd">whoami</span></div>
+          <div class="line out"><span id="hero-name">LinZheX</span></div>
+          <div class="line"><span class="t-prompt">$ </span><span class="cmd">cat title.txt</span></div>
+          <div class="line out"><span id="hero-title" data-i18n="hero.title">你好，我是 LinZheX 👋</span></div>
+          <div class="line"><span class="t-prompt">$ </span><span class="cmd">cat bio.txt</span></div>
+          <div class="line out" id="hero-bio" data-i18n="hero.bio">写代码的人。</div>
+          <div class="line"><span class="t-prompt">$ </span><span class="cmd">echo <span id="hero-cursor" class="cursor">█</span></span></div>
+          <div class="line hero-links">
+            <a id="hero-github" href="https://github.com/LinZheX" target="_blank" rel="noopener">GitHub</a>
+            <a id="hero-email" href="#" hidden>Email</a>
+            <a id="hero-blog" href="#" target="_blank" rel="noopener" hidden>Blog</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 关于我 -->
+    <section id="about" class="section">
+      <h2><span class="hash">#</span> <span data-i18n="about.heading">关于我 / about</span></h2>
+      <div class="about-flex">
+        <img id="about-avatar" alt="avatar" width="96" height="96">
+        <p id="about-text" data-i18n="about.text">
+          这里放一段自我介绍：你是谁、在做什么、喜欢什么。直接编辑 js/main.js 顶部的 SITE 配置即可修改。
+        </p>
+      </div>
+      <ul class="facts">
+        <li><span class="key">location</span><span class="sep">=</span><span id="fact-location" class="val">—</span></li>
+        <li><span class="key">since</span><span class="sep">=</span><span id="fact-since" class="val">—</span></li>
+        <li><span class="key">repos</span><span class="sep">=</span><span id="fact-repos" class="val">—</span></li>
+        <li><span class="key">followers</span><span class="sep">=</span><span id="fact-followers" class="val">—</span></li>
+      </ul>
+    </section>
+
+    <!-- 技能标签 -->
+    <section id="skills" class="section">
+      <h2><span class="hash">#</span> <span data-i18n="skills.heading">技能 / skills</span></h2>
+      <div id="skill-cloud" class="skill-cloud"></div>
+      <p class="hint" data-i18n="skills.hint">（在 js/main.js 的 SITE.skills 里修改标签）</p>
+    </section>
+
+    <!-- 项目作品 -->
+    <section id="projects" class="section">
+      <h2><span class="hash">#</span> <span data-i18n="projects.heading">项目 / projects</span></h2>
+      <p class="sub" data-i18n="projects.sub">来自 GitHub 的公开仓库，按最近更新排序。</p>
+      <div id="project-grid" class="project-grid">
+        <div class="loading" data-i18n="projects.loading">$ git fetch origin …</div>
+      </div>
+      <p class="hint"><a id="projects-more" href="https://github.com/LinZheX?tab=repositories" target="_blank" rel="noopener" data-i18n="projects.more">在 GitHub 上查看全部 →</a></p>
+    </section>
+
+    <!-- 联系方式 -->
+    <section id="contact" class="section">
+      <h2><span class="hash">#</span> <span data-i18n="contact.heading">联系 / contact</span></h2>
+      <div id="contact-list" class="contact-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span class="footer-prompt">$ exit</span>
+    <span id="footer-text"></span>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
